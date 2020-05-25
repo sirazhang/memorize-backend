@@ -1,4 +1,5 @@
 const db = require('../config/db.config.js');
+const env = require('../config/env')
 const config = require('../config/config.js');
 const User = db.user;
 const Role = db.role;
@@ -48,12 +49,62 @@ exports.signup = (req, res) => {
 	})
 }
 
+exports.updatepassword = async(req, res) =>{
+	console.log("Update-Password");
+	var email = req.body.email;
+	var password = bcrypt.hashSync(req.body.password, 8);
+	try{
+        let records = await db.sequelize.query(
+            "CALL `testdb`.`Proc_User_Update_Password`(:i_Email, :i_Password, @o_Result);", 
+            {replacements:{i_Email: email, i_Password: password}});
+        let o_Result = await db.sequelize.query("SELECT @o_Result;")
+		console.log("---+", o_Result);
+		if(o_Result[0][0]['@o_Result'] == 0 || o_Result[0][0]['@o_Result'] == null) 
+			res.status(200).send({code:0, msg:"Success"});
+		else
+			res.status(200).send({code:1, msg:"Failed"});
+    }catch(err){
+        console.log(err);
+        res.status(500).send({code:500, msg:"Sql error", error: err})
+    }
+}
+
+/* Reset Reset Password Link*/
+exports.sendResetPasswordLink = (req, res) => {
+	var email = req.body.email;
+	User.findOne({
+		where:{
+			email: email
+		}
+	}).then(user => {
+		if(!user) {
+			return res.status(404).send({code:-1, msg: 'User Not Found.'})
+		}	
+		try{
+			const sgMail = require('@sendgrid/mail');
+			sgMail.setApiKey(env.sg_api_key);
+			const msg = {
+				to: email,
+				from: 'memorize@support.com',
+				subject: 'Reset password link',
+				text: `Hi ${user.username} \n 
+				Please click on the following link ${env.url_front}/reset-password to reset your password. \n\n 
+				If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+			};
+			sgMail.send(msg);	
+		}catch(err){
+			return res.status(400).send({code:-2, msg:'Email sending error'});
+		}
+		return res.status(200).send({code:0, msg: "Success"})
+	})
+}
+
 exports.signin = (req, res) => {
 	console.log("Sign-In");
 	
 	User.findOne({
 		where: {
-			username: req.body.username
+			email: req.body.email
 		}
 	}).then(user => {
 		if (!user) {
@@ -62,7 +113,7 @@ exports.signin = (req, res) => {
 				msg: 'User Not Found.'
 			});
 		}
-
+		
 		var passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
 		if (!passwordIsValid) {
 			return res.status(401).send({ 
@@ -78,7 +129,7 @@ exports.signin = (req, res) => {
 		
 		res.status(200).send({ 
 			auth: true, 
-			accessToken: token 
+			accessToken: token ,
 		});
 		
 	}).catch(err => {
@@ -89,7 +140,6 @@ exports.signin = (req, res) => {
 		});
 	});
 }
-
 exports.userContent = (req, res) => {
 	User.findOne({
 		where: {id: req.userId},

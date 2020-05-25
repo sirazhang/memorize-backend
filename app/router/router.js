@@ -8,7 +8,11 @@ module.exports = function(app) {
 
 	app.post('/api/auth/signup', [verifySignUp.checkDuplicateUserNameOrEmail, verifySignUp.checkRolesExisted], controller.signup);
 	
+	app.post('/api/auth/update-password', controller.updatepassword);
+
 	app.post('/api/auth/signin', controller.signin);
+	
+	app.post('/api/auth/reset-password-mail', controller.sendResetPasswordLink);
 	
 	app.get('/api/latitude/getall', [authJwt.verifyToken, authJwt.isPmOrAdmin], wordDataController.getAllLatitudes)
 
