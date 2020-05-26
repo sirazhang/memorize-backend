@@ -140,6 +140,7 @@ exports.signin = (req, res) => {
 		});
 	});
 }
+
 exports.userContent = (req, res) => {
 	User.findOne({
 		where: {id: req.userId},

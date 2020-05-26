@@ -11,6 +11,7 @@ const env = {
 	  idle: 10000
   },
   sg_api_key: "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",
+  //sg_api_key: "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",
   url_front: "http://localhost:3000"
 };
  
