@@ -20,7 +20,7 @@ db.sequelize.sync({force: false}).then(() => {
 });
  
 //require('./app/route/project.route.js')(app);
- 
+
 // Create a Server
 var server = app.listen(8080, function () {
  
