@@ -38,7 +38,7 @@ exports.getLatitudeZoom = async (req, res) => {
 
 exports.getAllLongitudes = async(req, res) => {
     console.log("Word Data Controller/ Get All Longitude...");
-    try{
+    try{ 
         let records = await db.sequelize.query("CALL `testdb`.`Proc_Longitude_GetAll` (@o_Result);")
         let o_Result = await db.sequelize.query("SELECT @o_Result;")
         console.log("---+", o_Result);
@@ -49,18 +49,39 @@ exports.getAllLongitudes = async(req, res) => {
     }
 }
 
-exports.getLongitudeZoom = async (req, res) => {
+exports.getLongitudeZoom = async (req, res) => { 
     console.log("Word Data Controller/Get Longitudes Zoom...");
     var maxl = getRandomInt(79);
     try{
         let records = await db.sequelize.query("CALL `testdb`.`Proc_Longitude_Zoom` (:i_Nth);", {replacements:{i_Nth: maxl}});
+        res.status(200).send({code:200, msg:"Success", data: records})
+    }catch(err){ 
+        console.log(err);
+        res.status(500).send({code:500, msg:"Sql error", error: err})
+    }
+}
+
+exports.getLatitudeGRE = async(req, res) => {
+    console.log("Word Data Controller / Get GRE Latitude")
+    try{
+        let records = await db.sequelize.query("CALL `testdb`.`Proc_GRELatitude_Zoom` (:i_Nth);", {replacements:{i_Nth: req.body.i_Nth}});
+        res.status(200).send({code:200, msg:"Success", data: records})
+    }catch(err){
+        console.log(err);
+        res.status(500).send({code:500, msg:"Sql error", error: err})
+    }
+}   
+
+exports.getLongitudeGRE = async(req, res) => {
+    console.log("Word Data Controller / Get GRE Longitude")
+    try{
+        let records = await db.sequelize.query("CALL `testdb`.`Proc_GRELongitude_Zoom` (:i_Nth);", {replacements:{i_Nth: req.body.i_Nth}});
         res.status(200).send({code:200, msg:"Success", data: records})
     }catch(err){
         console.log(err);
         res.status(500).send({code:500, msg:"Sql error", error: err})
     }
 }
-
 exports.wordSelect = async(req, res) => {
     console.log("Word Data Controller / Get Word Select ...")
     try{
@@ -83,10 +104,28 @@ exports.wordSelectList = async(req, res) => {
             {replacements:{i_PageNo: req.body.PageNo, i_PageSize: req.body.PageSize, i_SearchValue: req.body.SearchValue}}
         );
         let o_TotalRowCount = await db.sequelize.query("SELECT @o_TotalRowCount;")
-        res.status(200).send({code:200, msg:"Success", data:{records: records, totalRowCount: o_TotalRowCount}})
+        console.log(o_TotalRowCount);
+        let studyResults = await db.sequelize.query(
+            "CALL `testdb`.`Proc_UserStudy_SelectList`(:i_UserId, :i_Reviewed);",
+            {replacements:{i_UserId: req.userId, i_Reviewed: 0}}
+        )
+        var i, j;
+        for(i = 0 ; i < records.length ; i ++){
+            records[i].EnglishMeaning = replaceAll(records[i].EnglishMeaning, ":::", "")
+            records[i].ChineseMeaning = replaceAll(records[i].ChineseMeaning, ":::", "")
+            for(j = 0 ; j < studyResults.length ; j ++){
+                if(records[i].id == studyResults[j].WordId){
+                    records[i].StudyStatus = studyResults[j].StudyStatus;
+                    break;
+                }else{
+                    records[i].StudyStatus = 2;
+                }
+            }
+        }
+        res.status(200).send({code:0, msg:"Success", data:{records: records, totalRowCount: o_TotalRowCount}})
     }catch(err){
         console.log(err);
-        res.status(500).send({code:500, msg:"Sql error", error: err})
+        res.status(500).send({code:1, msg:"Sql error", error: err})
     }
 }
 
@@ -156,7 +195,7 @@ exports.wordSelectListZoom = async(req, res) => {
                         extras = replaceAll(extras, "-", "");
                         extras = replaceAll(extras, "/", ",");
                         extras = extras.split(",");
-        
+
                         value = value.substr(0, value.indexOf("("));
                     }
                     values.push(value);
@@ -196,13 +235,13 @@ exports.wordSelectListZoom = async(req, res) => {
                         }
                     })
                 })
-                
+
                 var suffixPos = word.indexOf(suffix);
                 if(suffixPos < 0){
                     root = word.substr(prefix.length, word.length-prefix.length);
                 }else{
                     root = word.substr(prefix.length, suffixPos-prefix.length);
-                    tale = word.substr(prefix.length+suffixPos+suffix.length, word.length-suffixPos-suffix.length-prefix.length);
+                    tale = word.substr(suffixPos+suffix.length, word.length-suffix.length-prefix.length);
                 }
                 tmp_row = {
                     id: row.id,
@@ -296,7 +335,7 @@ exports.wordSelectListZoom = async(req, res) => {
                 tmp_row = {
                     id: row.id,
                     word: word, 
-                    config:{prefix:"", root:word, suffix:suffix, tale:tale}, 
+                    config:{prefix:"", root:word, suffix:"", tale:""}, 
                     location:{lat:row.LatitudeId-lat_min, lon:Math.random(), delta: getRandomDouble(-1, 1)},
                     details: {
                         pronun: row.Pronuncation,
@@ -354,18 +393,18 @@ exports.wordSelectListZoom = async(req, res) => {
                         }
                     })
                 })
-                
+
                 var suffixPos = word.indexOf(suffix);
                 if(suffixPos < 0){
                     root = word.substr(prefix.length, word.length-prefix.length);
-                }else{
+                }else{ 
                     root = word.substr(prefix.length, suffixPos-prefix.length);
-                    tale = word.substr(suffixPos+suffix.length, word.length-suffixPos-suffix.length);
+                    tale = word.substr(suffixPos+suffix.length, word.length-suffixPos-suffix.length-prefix.length);
                 }
                 tmp_row = {
                     id: row.id,
                     word: word, 
-                    config:{prefix:prefix, root:root, suffix:suffix, tale:tale}, 
+                    config:{prefix:"", root:root, suffix:suffix, tale:tale}, 
                     location:{lat:Math.random(), lon:row.LongitudeId-lon_min, delta: getRandomDouble(-1, 1)},
                     details: {
                         pronun: row.Pronuncation,
@@ -383,6 +422,149 @@ exports.wordSelectListZoom = async(req, res) => {
     }catch(err){
         console.log(err);
         res.status(500).send({code:-1, msg:"sql error", error: err});
+    }
+}
+
+exports.wordSelectListGRE = async(req, res) => {
+    console.log("Word Data Controller / Get Word SelectList for GRE")
+    var i_Nth = req.body.i_Nth
+    try{
+        let records = await db.sequelize.query(
+            "CALL `testdb`.`Proc_GREWord_SelectList_Zoom`(:i_Nth);",
+            {replacements:{i_Nth: i_Nth}}
+        )
+        let level1Ids = await db.sequelize.query(
+            "CALL `testdb`.`Proc_GREWord_SelectList_Zoom_Level1`(:i_Nth);",
+            {replacements:{i_Nth: i_Nth}}
+        )
+
+        var revised_records = [];
+        var cntLevel1 = 0;
+        if(records != null) {
+            records.map((row, index) => {  
+                var prefixes = null;
+                if(row.LatitudeAffix){
+                    prefixes = row.LatitudeAffix.toLowerCase();//.replaceAll(" ", "").replaceAll("-", "").replaceAll("/", ",").split(",");
+                    prefixes = replaceAll(prefixes, " ", "");
+                    prefixes = replaceAll(prefixes, "-", "");
+                    prefixes = replaceAll(prefixes, "/", ",");  
+                    prefixes = prefixes.split(",");
+                }
+                var suffixes = null;
+                if(row.LongitudeAffix){
+                    suffixes = row.LongitudeAffix.toLowerCase();//.replaceAll(" ", "").replaceAll("-", "").replaceAll("/", ",").split(",");
+                    suffixes = replaceAll(suffixes, " ", "");
+                    suffixes = replaceAll(suffixes, "-", "");
+                    suffixes = replaceAll(suffixes, "/", ",");
+                    suffixes = suffixes.split(",");    
+                }
+                var prefix = "", root = "", suffix = "", tale = "";
+                var word = row.Word.toLowerCase();
+                //var level = index % 2 + 2;
+                if((row.GRELatId)%2 == 0 && (row.GRELonId)%2 == 0){
+                    level = 2;
+                }else{
+                    level = 3;
+                }
+                if(level1Ids){
+                    for(var i = 0 ; i < level1Ids.length ; i ++)
+                    {
+                        if(level1Ids[i].WordId != null && row.WordId == level1Ids[i].WordId){
+                            level = 1;
+                        }
+                    }
+                }
+
+                // var stepForZoom0 = Math.floor(records.length / 8);
+                // if(stepForZoom0 % 2 == 1) stepForZoom0 -= 1;
+                // if(stepForZoom0 > 1 && index % stepForZoom0 == 0){
+                //     level = 1;   
+                // }
+
+                if(prefixes != null){
+                    prefixes.map((value) => {
+                        var extras = [];
+                        var values = [];
+                        if(value.includes("(")){
+                            extras = value.match(/\((.*)\)/).toString().toLowerCase();//replaceAll(" ", "").replaceAll("-", "").replaceAll("/", ",").split(",");
+                            extras = replaceAll(extras, " ", "");
+                            extras = replaceAll(extras, "-", ""); 
+                            extras = replaceAll(extras, "/", ",");
+                            extras = replaceAll(extras, "=", ",");
+                            extras = extras.split(",");
+
+                            value = value.substr(0, value.indexOf("("));
+                        }
+                        values.push(value);
+                        if(extras.length > 0){
+                            extras.map((value1) => {
+                                values.push(value+value1);
+                            })
+                        }
+                        values.map((value2) => {
+                            if(word.includes(value2)){
+                                prefix = value2;
+                            }
+                        })
+                    })
+                }
+
+                if(suffixes != null){
+                    suffixes.map((value) => {
+                        var extras = [];
+                        var values = [];
+                        if(value.includes("(")){
+                            extras = value.match(/\((.*)\)/).toString().toLowerCase();//.replaceAll(" ", "").replaceAll("-", "").replaceAll("/", ",").split(",");
+                            extras = replaceAll(extras, " ", "");
+                            extras = replaceAll(extras, "-", "");
+                            extras = replaceAll(extras, "/", ",");
+                            extras = replaceAll(extras, "=", ",");
+                            extras = extras.split(",");
+
+                            value = value.substr(0, value.indexOf("("));
+                        }
+                        values.push(value);
+                        if(extras.length > 0){
+                            extras.map((value1) => {
+                                values.push(value+value1);
+                            })
+                        }
+                        values.map((value2) => {
+                            if(word.includes(value2)){
+                                suffix = value2;
+                            }
+                        })
+                    })
+                }
+
+                var suffixPos = word.indexOf(suffix);
+                if(suffixPos < 0 || suffix == ""){
+                    root = word.substr(prefix.length, word.length-prefix.length);
+                }else{
+                    root = word.substr(prefix.length, suffixPos-prefix.length);
+                    tale = word.substr(suffixPos+suffix.length, word.length-suffix.length-prefix.length);
+                }
+                tmp_row = {
+                    id: row.WordId,
+                    word: word, 
+                    config:{prefix:prefix, root:root, suffix:suffix, tale:tale}, 
+                    location:{lat:row.GRELatId, lon:row.GRELonId, delta: getRandomDouble(-0.5, 0.5)},
+                    details: {
+                        pronun: row.Pronuncation,
+                        english: replaceAll(row.EnglishMeaning, ":::", ""),
+                        chinese: replaceAll(row.ChineseMeaning, ":::", ""),
+                        example: replaceAll(row.ExampleSentences, ":::", "")
+                    },
+                    level: level
+                }
+                revised_records.push(tmp_row);
+            })
+        }
+        res.status(200).send({code:0, msg:"success", data:{records: revised_records}});
+
+    }catch(err){
+        console.log(err)
+        res.status(500).send({code:-1, msg:"sql error", error: err})
     }
 }
 
@@ -419,7 +601,7 @@ exports.wordSelectListZoom2 = async(req, res) => {
             "CALL `testdb`.`Proc_Word_SelectList_Zoom2`();"
         );
         res.status(200).send({code:0, msg:"success", data:{records: records}});
-    }catch(err){
+    }catch(err){ 
         console.log(err);
         res.status(500).send({code:-1, msg:"sql error", error: err});
     }

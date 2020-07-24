@@ -12,38 +12,39 @@ var bcrypt = require('bcryptjs');
 exports.signup = (req, res) => {
 	// Save User to Database
 	console.log("Processing func -> SignUp");
-	
+
 	User.create({
 		name: req.body.name,
 		username: req.body.username,
 		email: req.body.email,
-		password: bcrypt.hashSync(req.body.password, 8)
+		password: bcrypt.hashSync(req.body.password, 8),
+		bcredit: 0,
 	}).then(user => {
 		Role.findAll({
-		  where: {
-			name: {
-			  [Op.or]: req.body.roles
+			where: {
+				name: {
+					[Op.or]: req.body.roles
+				}
 			}
-		  }
 		}).then(roles => {
 			user.setRoles(roles).then(() => {
 				res.status(200).send({
-					code:200, 
-					msg:"User registered successfully!", 
+					code:200,
+					msg:"User registered successfully!",
 					//data:user
 				});
             });
 		}).catch(err => {
 			res.status(500).send({
-				code:500, 
-				msg: "Error", 
+				code:500,
+				msg: "Error",
 				error: err
 			});
 		});
 	}).catch(err => {
 		res.status(500).send({
-			code:500, 
-			msg: "Failed err", 
+			code:500,
+			msg: "Failed err",
 			error: err
 		});
 	})
@@ -55,11 +56,11 @@ exports.updatepassword = async(req, res) =>{
 	var password = bcrypt.hashSync(req.body.password, 8);
 	try{
         let records = await db.sequelize.query(
-            "CALL `testdb`.`Proc_User_Update_Password`(:i_Email, :i_Password, @o_Result);", 
+            "CALL `testdb`.`Proc_User_Update_Password`(:i_Email, :i_Password, @o_Result);",
             {replacements:{i_Email: email, i_Password: password}});
         let o_Result = await db.sequelize.query("SELECT @o_Result;")
 		console.log("---+", o_Result);
-		if(o_Result[0][0]['@o_Result'] == 0 || o_Result[0][0]['@o_Result'] == null) 
+		if(o_Result[0][0]['@o_Result'] == 0 || o_Result[0][0]['@o_Result'] == null)
 			res.status(200).send({code:0, msg:"Success"});
 		else
 			res.status(200).send({code:1, msg:"Failed"});
@@ -79,7 +80,7 @@ exports.sendResetPasswordLink = (req, res) => {
 	}).then(user => {
 		if(!user) {
 			return res.status(404).send({code:-1, msg: 'User Not Found.'})
-		}	
+		}
 		try{
 			const sgMail = require('@sendgrid/mail');
 			sgMail.setApiKey(env.sg_api_key);
@@ -87,11 +88,11 @@ exports.sendResetPasswordLink = (req, res) => {
 				to: email,
 				from: 'memorize@support.com',
 				subject: 'Reset password link',
-				text: `Hi ${user.username} \n 
-				Please click on the following link ${env.url_front}/reset-password to reset your password. \n\n 
+				text: `Hi ${user.username} \n
+				Please click on the following link ${env.url_front}/reset-password to reset your password. \n\n
 				If you did not request this, please ignore this email and your password will remain unchanged.\n`,
 			};
-			sgMail.send(msg);	
+			sgMail.send(msg);
 		}catch(err){
 			return res.status(400).send({code:-2, msg:'Email sending error'});
 		}
@@ -101,7 +102,7 @@ exports.sendResetPasswordLink = (req, res) => {
 
 exports.signin = (req, res) => {
 	console.log("Sign-In");
-	
+
 	User.findOne({
 		where: {
 			email: req.body.email
@@ -109,33 +110,34 @@ exports.signin = (req, res) => {
 	}).then(user => {
 		if (!user) {
 			return res.status(404).send({
-				code:404, 
+				code:404,
 				msg: 'User Not Found.'
 			});
 		}
-		
+
 		var passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
 		if (!passwordIsValid) {
-			return res.status(401).send({ 
-				auth: false, 
-				accessToken: null, 
-				reason: "Invalid Password!" 
+			return res.status(401).send({
+				auth: false,
+				accessToken: null,
+				reason: "Invalid Password!"
 			});
 		}
-		
+
 		var token = jwt.sign({ id: user.id }, config.secret, {
-		  expiresIn: 86400 // expires in 24 hours
+		  	expiresIn: 86400 // expires in 24 hours
 		});
-		
-		res.status(200).send({ 
-			auth: true, 
-			accessToken: token ,
+
+		res.status(200).send({
+			auth: true,
+			accessToken: token,
+			id: user.username
 		});
-		
+
 	}).catch(err => {
 		res.status(500).send({
-			code:500, 
-			msg: "Failed err", 
+			code:500,
+			msg: "Failed err",
 			error: err
 		});
 	});
@@ -154,13 +156,13 @@ exports.userContent = (req, res) => {
 		}]
 	}).then(user => {
 		res.status(200).json({
-			code: 500,
+			code: 0,
 			msg: "User Content Page",
 			data: user
 		});
 	}).catch(err => {
 		res.status(500).json({
-			code: 500,
+			code: 1,
 			msg: "Can not access User Page",
 			error : err
 		});

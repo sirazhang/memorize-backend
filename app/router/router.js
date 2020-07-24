@@ -6,6 +6,7 @@ module.exports = function(app) {
     const controller = require('../controller/user.controller.js');
 	const wordDataController = require('../controller/worddata.controller.js');
 	const userStudyController = require('../controller/userstudy.controller');
+	const brainStorm = require('../controller/brainstorm.controller');
 	/* auth */
 	app.post('/api/auth/signup', [verifySignUp.checkDuplicateUserNameOrEmail, verifySignUp.checkRolesExisted], controller.signup);
 	
@@ -25,7 +26,7 @@ module.exports = function(app) {
 
 	app.post('/api/worddata/select', wordDataController.wordSelect)
 
-	app.post('/api/worddata/selectlist', wordDataController.wordSelectList)
+	app.post('/api/worddata/selectlist', [authJwt.verifyToken], wordDataController.wordSelectList)
 
 	app.post('/api/worddata/selectlist_zoom', [authJwt.verifyToken], wordDataController.wordSelectListZoom)
 
@@ -34,9 +35,27 @@ module.exports = function(app) {
 	app.get('/api/worddata/selectlist_zoom1', wordDataController.wordSelectListZoom1)
 
 	app.get('/api/worddata/selectlist_zoom2', wordDataController.wordSelectListZoom2)
+	
+	//GRE Word Map SelectList
+	app.post('/api/worddata/selectlist_gre', wordDataController.wordSelectListGRE)
+
+	//GRE Latitude SelectList
+	app.post('/api/worddata/latitude_gre', wordDataController.getLatitudeGRE)
+
+	//GRE Longitude SelectList
+	app.post('/api/worddata/longitude_gre', wordDataController.getLongitudeGRE)
+
 	/* user study */
 	app.post('/api/userstudy/save', [authJwt.verifyToken], userStudyController.UserStudySave)
+
+	app.post('/api/userstudy/selectlist', [authJwt.verifyToken], userStudyController.UserStudySelectList)
 	
+	/* BrainStorm */
+	app.post('/api/brainstorm/synonymwords', [authJwt.verifyToken], brainStorm.getSynonymWords) 
+
+	app.post('/api/brainstorm/updatebcredit', [authJwt.verifyToken], brainStorm.updateUserBCredit)
+ 
+	app.get('/api/brainstorm/getbcredit', [authJwt.verifyToken], brainStorm.getUserBCredit)
 	/* test */
 	app.get('/api/test/user', [authJwt.verifyToken], controller.userContent);
 	

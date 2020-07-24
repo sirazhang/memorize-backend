@@ -13,7 +13,7 @@ module.exports = (sequelize, Sequelize) => {
             type: Sequelize.STRING
         },
         ConnectedWordIds:{
-            type: Sequelize.STRING            
+            type: Sequelize.STRING
         },
         MeaningCount:{
             type: Sequelize.INTEGER
@@ -26,7 +26,7 @@ module.exports = (sequelize, Sequelize) => {
         },
         ExampleSentences:{
             type: Sequelize.STRING
-        }
+        },
 	});
 	return worddetailedinformation;
 }
